@@ -395,7 +395,7 @@
             cursor: pointer;
             margin-bottom: 15px;
             text-align: left;
-            transition: all 0.3s ease;
+            transition: all 0.15s ease;
         }
 
         .choice-button:hover:not(:disabled) {
@@ -974,7 +974,8 @@
             queuedEvent: null,
             firstEvent: true,
             eventCount: 0,
-            lastMilestones: {}
+            lastMilestones: {},
+            isProcessingChoice: false
         };
 
         // Audio System
@@ -2357,6 +2358,11 @@
 
         // Event System
         function nextEvent() {
+            // Prevent double-clicks on Continue button
+            if (gameState.isProcessingChoice) {
+                return;
+            }
+
             // Check victory condition
             const yearsRuled = Math.floor(gameState.currentYear - gameState.startYear);
             if (yearsRuled >= gameState.targetYears && gameState.eventCount >= 10) {
@@ -2436,6 +2442,8 @@
             
             if (eventKey && events[eventKey]) {
                 displayEvent(eventKey);
+                // Reset processing flag to allow new choices
+                gameState.isProcessingChoice = false;
             }
         }
 
@@ -2508,10 +2516,16 @@
         }
 
         function makeChoice(eventKey, choiceIndex) {
-            playSound('click');
-            
-            // Disable all choice buttons
+            // Prevent double-clicks and re-entry
+            if (gameState.isProcessingChoice) {
+                return;
+            }
+            gameState.isProcessingChoice = true;
+
+            // Immediately disable all choice buttons before any other processing
             document.querySelectorAll('.choice-button').forEach(btn => btn.disabled = true);
+
+            playSound('click');
             
             const event = events[eventKey];
             const choice = event.choices[choiceIndex];
@@ -2704,9 +2718,9 @@
                 </div>
             </div>
             `;
-            
-            // Append to event display
-            document.getElementById('eventDisplay').innerHTML += consequencesHTML;
+
+            // Append to event display (using insertAdjacentHTML to avoid re-parsing)
+            document.getElementById('eventDisplay').insertAdjacentHTML('beforeend', consequencesHTML);
         }
 
         function generateRumors(choice) {
